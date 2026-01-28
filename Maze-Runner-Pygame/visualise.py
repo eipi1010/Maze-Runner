@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-from constant import MAZE, COORDINATES,Action,Index
+from constant import MAZE, COORDINATES,Action,Index,Color
 
 
 def sigmoid(x:int):
@@ -15,10 +15,10 @@ def visualise(screen,player):
     #Initialising squares (rewards)
     for i in range(len(MAZE)):
         for j in range(len(MAZE[i])):
-            pygame.draw.rect(screen, (200 * sigmoid(MAZE[i][j])+55, 200 * sigmoid(MAZE[i][j])+55,200 * sigmoid(MAZE[i][j]+55)), (10+(150*i), 10+(150*j), 150, 150))
-            pygame.draw.rect(screen, (0,255,255), (10+(150*i), 10+(150*j), 150, 150),5)
+            pygame.draw.rect(screen, (200 * sigmoid(MAZE[i][j])+55, 200 * sigmoid(MAZE[i][j])+55,200 * sigmoid(MAZE[i][j]+55)), (10+(150*j), 10+(150*i), 150, 150))
+            pygame.draw.rect(screen, (0,255,255), (10+(150*j), 10+(150*i), 150, 150),5)
             text_surface = reward_font.render(str(MAZE[i][j]),True,(100,100,255 * sigmoid(MAZE[i][j])))
-            screen.blit(text_surface, (130+(150*i),130+(150*j)))
+            screen.blit(text_surface, (130+(150*j),130+(150*i)))
 
     #Initialising arrows (q-tables)
     '''
@@ -66,7 +66,7 @@ def visualise(screen,player):
 
     pygame.draw.circle(screen,(0,0,0),COORDINATES[player.state],10)
 
-def draw_reward_graph(screen, rewards, episode, origin=(50, 500), size=(800, 200), window_size=100):
+def draw_reward_graph(screen, rewards, episode, player,origin=(50, 500), size=(800, 200), window_size=100):
     """
     Draw a scrolling reward graph showing the last 'window_size' episodes.
     
@@ -92,7 +92,7 @@ def draw_reward_graph(screen, rewards, episode, origin=(50, 500), size=(800, 200
     
 
     # Calculate scaling for y-axis
-    max_r = max(rewards)
+    max_r = max(rewards) 
     min_r = min(rewards)
     
     range_r = max_r - min_r
@@ -116,8 +116,25 @@ def draw_reward_graph(screen, rewards, episode, origin=(50, 500), size=(800, 200
         # Calculate y positions
         y1 = y0 + h - (rewards[i] - min_r) * scale_y
         y2 = y0 + h - (rewards[i + 1] - min_r) * scale_y
+
+
         
         pygame.draw.line(screen, (0, 255, 0), (x1, y1), (x2, y2), 2)
+
+        font = pygame.font.SysFont("segoeuisymbol", 28)
+
+
+        image = font.render(f"{player.prev_actions}",True,Color.GREEN_R)
+        screen.blit(image,(10,475))
+        image = font.render(f"Random move chance: {player.epsilon}",True, Color.GREEN_R)
+        screen.blit(image,(500,250))
+        image = font.render(f"Reward {np.mean(rewards[-1:])} at epoch count {len(rewards)}",True, Color.GREEN_R)
+        screen.blit(image,(500,275))
+        image = font.render(f"Average Reward in the last 50 epochs: {np.mean(rewards[-50:])}", True, Color.GREEN_R)
+        screen.blit(image, (500, 300))
+
+
+        
 
 def show_q_equation_and_wait(screen, player, prev_state, action, reward):
     """
@@ -138,22 +155,81 @@ def show_q_equation_and_wait(screen, player, prev_state, action, reward):
     else:
         a = "RIGHT"
     
-    e_one = "Q(s,a) <= Q(s,a) + α[r + γ(max Q(s',a')) - Q(s,a)]"
-    e_two = f"Q[{prev_state}, {a}] <= Q[{prev_state}, {a}] + {player.alpha}*[{reward} + {player.gamma}*max(Q[{player.state}]) - Q[{prev_state}, {a}])"
-    e_three = f"Q[{prev_state},{a}] <= {old_q_value:.4f} + {player.alpha:.3f} * ({reward:.2f} + {player.gamma:.2f} * {max_next_q:.4f} - {old_q_value:.4f})"
-    e_four = f"Q[{prev_state},{a}] <= {updated_q}"
-
     font = pygame.font.SysFont("segoeuisymbol", 28)
-    text = font.render(e_one, True, (255, 255, 255))
-    screen.blit(text, (500, 55))
+    x_pos = 500
 
-    text = font.render(e_two,True,(255,255,255))
-    screen.blit(text,(500,105))
 
-    text = font.render(e_three,True,(255,255,255))
-    screen.blit(text,(500,155))
+    # --- Equation 1: Symbolic ---
+    # Q(s,a) ← Q(s,a) + α[r + γ(max Q(s',a')) - Q(s,a)]
 
-    text = font.render(e_four,True,(255,255,255))
-    screen.blit(text,(500,205))
 
-    pygame.display.flip()
+    parts_one = [
+        ("Q(s,a) <= ", Color.WHITE),
+        ("Q(s,a) ", Color.RED_OLD),
+        ("+ ", Color.WHITE),
+        ("α", Color.YELLOW_A),
+        ("[", Color.WHITE),
+        ("r", Color.GREEN_R),
+        (" + ", Color.WHITE),
+        ("γ", Color.CYAN_G),
+        ("(max Q(s',a'))", Color.MAGENTA_MAX),
+        (" - ", Color.WHITE),
+        ("Q(s,a)", Color.RED_OLD),
+        ("]", Color.WHITE)
+    ]
+    blit_multi_colored_text(screen, font, x_pos, 55, parts_one)
+
+    # --- Equation 2: Variable Names/Values ---
+    parts_two = [
+        (f"Q[■{prev_state+1}, {a}] <= ", Color.WHITE),
+        (f"Q[■{prev_state+1}, {a}] ", Color.RED_OLD),
+        ("+ ", Color.WHITE),
+        (f"{player.alpha}", Color.YELLOW_A),
+        ("*[", Color.WHITE),
+        (f"{reward}", Color.GREEN_R),
+        (" + ", Color.WHITE),
+        (f"{player.gamma}", Color.CYAN_G),
+        (f"*max(Q[■{player.state+1}])", Color.MAGENTA_MAX),
+        (" - ", Color.WHITE),
+        (f"Q[■{prev_state+1}, {a}]", Color.RED_OLD),
+        ("])", Color.WHITE)
+    ]
+    blit_multi_colored_text(screen, font, x_pos, 105, parts_two)
+
+    # --- Equation 3: Actual Numbers ---
+    # Note: I added ':.2f' formatting to keep it readable
+    parts_three = [
+        (f"Q[■{prev_state+1},{a}] <= ", Color.WHITE),
+        (f"{old_q_value:.3f} ", Color.RED_OLD),
+        ("+ ", Color.WHITE),
+        (f"{player.alpha:.3f}", Color.YELLOW_A),
+        (" * (", Color.WHITE),
+        (f"{reward:.3f}", Color.GREEN_R),
+        (" + ", Color.WHITE),
+        (f"{player.gamma:.3f}", Color.CYAN_G),
+        (" * ", Color.WHITE),
+        (f"{max_next_q:.3f}",Color.MAGENTA_MAX),
+        (" - ", Color.WHITE),
+        (f"{old_q_value:.3f}", Color.RED_OLD),
+        (")", Color.WHITE)
+    ]
+    blit_multi_colored_text(screen, font, x_pos, 155, parts_three)
+
+    # --- Equation 4: Final Result ---
+    # Assuming updated_q is calculated beforehand
+    parts_four = [
+        (f"Q[■{prev_state+1},{a}] = ", Color.WHITE),
+        (f"{updated_q:.4f}", (100, 255, 100)) # Bright Green for final result
+    ]
+    blit_multi_colored_text(screen, font, x_pos, 205, parts_four)
+
+def blit_multi_colored_text(screen, font, x, y, parts):
+    """
+    Draws text with different colors on the same line.
+    parts: list of tuples -> [("text", (r,g,b)), ("text2", (r,g,b))]
+    """
+    current_x = x
+    for text_content, color in parts:
+        image = font.render(text_content, True, color)
+        screen.blit(image, (current_x, y))
+        current_x += image.get_width() # Move the cursor to the right

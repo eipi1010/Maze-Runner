@@ -9,13 +9,15 @@ class Player():
         self.state = state
         self.start_state = state
         self.end = end
+        self.action_record = []
+        self.prev_actions = []
  
         self.length = len(MAZE)
         self.width = len(MAZE[0])
         self.q_table = np.zeros((self.length*self.width,4))
 
         self.gamma = 0.9
-        self.alpha = 0.909
+        self.alpha = 0.90
         self.epsilon = 1
         self.min_epsilon = 0.1
         
@@ -34,15 +36,23 @@ class Player():
         if action == Index.UP:
             if self.legal(self.state,Action.UP):
                 self.move(Action.UP)
+                self.action_record.append("U")
         elif action == Index.DOWN:
             if self.legal(self.state,Action.DOWN):
                 self.move(Action.DOWN)
+                self.action_record.append("D")
         elif action == Index.LEFT:
             if self.legal(self.state,Action.LEFT):
                 self.move(Action.LEFT)
+                self.action_record.append("L")
         else:
             if self.legal(self.state,Action.RIGHT):
                 self.move(Action.RIGHT)
+                self.action_record.append("R")
+        if self.state in self.end:
+            self.prev_actions = self.action_record.copy()
+            self.action_record.clear()
+
 
     
     def dead(self,action) -> bool:
@@ -87,5 +97,6 @@ class Player():
 
     def reset(self):
         self.state = self.start_state
+
 
 

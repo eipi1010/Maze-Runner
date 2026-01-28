@@ -10,17 +10,19 @@ def main():
     WIDTH, HEIGHT = 1200, 800
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("My Pygame Window")
-    player = Player(0,8)
+    player = Player(0,[8])
     episode_rewards = []
+    visual_actions = []
+    waiting = True
 
     # Main loop
     episode = 1000
     for _ in range(episode):
         player.reset()
         total_reward = 0
-        while player.state != player.end:
+        visual_actions.clear()
+        while player.state not in player.end:
             visualise(screen,player)
-            draw_reward_graph(screen,episode_rewards,episode)
     
             if player.epsilon < np.random.rand() and np.max(player.q_table[player.state]):
                 action = np.argmax(player.q_table[player.state])
@@ -38,14 +40,27 @@ def main():
 
             show_q_equation_and_wait(screen,player,prev_state,action,reward)
             player.q_table[prev_state, action] += player.alpha * (reward + player.gamma * np.max(player.q_table[player.state]) - player.q_table[prev_state, action])
-    
+            draw_reward_graph(screen,episode_rewards,episode,player)
             time.sleep(0.05)
             # Update the display
-            waiting = True
-            while waiting:
+
+            step_mode = True
+
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                        waiting = True
+            while waiting and step_mode:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_RSHIFT]:
+                    step_mode = False
                 for event in pygame.event.get():
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         waiting = False
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            step_mode = False
+                    
+            
                         
             pygame.display.flip()
         episode_rewards.append(total_reward)

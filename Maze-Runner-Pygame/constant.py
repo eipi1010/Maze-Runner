@@ -1,9 +1,9 @@
 import numpy as np
 from enum import Enum,IntEnum
 MAZE = np.array([
-    [-3,-3,-3],
-    [-3,-3,-3],
-    [-3,-3,10],
+    [-3,-4,-7],
+    [-2,-5,-6],
+    [-10,-3,10],
     ])
 
 COORDINATES = {
@@ -29,6 +29,15 @@ INDEX = {
 7:(2,1),
 8:(2,2),
 }
+
+    # Colors
+class Color():
+    WHITE = (255, 255, 255)
+    RED_OLD = (255, 100, 100)   # Old Q-Value
+    GREEN_R = (0, 255, 0)       # Reward
+    YELLOW_A = (255, 255, 0)    # Alpha
+    CYAN_G = (0, 255, 255)      # Gamma
+    MAGENTA_MAX = (255, 0, 255) # Max Future Q
 
 class Action(IntEnum):
     LEFT = -1
